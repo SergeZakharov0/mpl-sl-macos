@@ -15,6 +15,7 @@
 "control.Real64"        use
 "control.Ref"           use
 "control.assert"        use
+"control.drop"          use
 "control.failProc"      use
 "control.when"          use
 "control.while"         use
