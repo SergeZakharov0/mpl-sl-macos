@@ -137,9 +137,8 @@ sleepFor: [
         context: @context addressToReference;
         ("[sleepFor cancellation] Deleting EVFILT_TIMER, timer_fd=" context.timer_fd LF) printList
 
-        # Delete the timer event from kqueue
         deleteEvent: struct_kevent;
-        @deleteEvent context.timer_fd EVFILT_TIMER EV_DELETE 0n32 0 0n64 EV_SET
+        @deleteEvent context.timer_fd EVFILT_TIMER EV_DELETE 0n32 0 0n64 0n64 0n64 EV_SET
 
         timespec Ref 0n32 0 struct_kevent Ref 1 deleteEvent kqueue_fd kevent -1 = [
           ("FATAL: [In sleepFor cancellation] kevent EV_DELETE failed, result=" errno LF) printList "" failProc
