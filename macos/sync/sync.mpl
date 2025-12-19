@@ -116,6 +116,7 @@ sleepFor: [
       FiberData Ref @fiberPair.!writeFiber
       @currentFiber @fiberPair.!readFiber
 
+      ("[sleepFor] Registering EVFILT_TIMER: timer_fd=" timer_fd ", duration=" duration ", expirationTime=" expirationTime ", fiberPair=" fiberPair storageAddress LF) printList
       @timerEvent timer_fd EVFILT_TIMER EV_ADD EV_ONESHOT or NOTE_NSECONDS expirationTime fiberPair storageAddress 0n64 0n64 EV_SET
 
       timespec Ref 0n32 0 struct_kevent Ref 1 timerEvent kqueue_fd kevent -1 = [
@@ -134,15 +135,17 @@ sleepFor: [
       context storageAddress [
         context: @context addressToReference;
         event: struct_kevent;
+        ("[sleepFor] Setting EVFILT_TIMER in cancellation func, timer_fd=" context.timer_fd LF) printList
         EVFILT_TIMER @event.@filter set
         timeout: timespec;
         context.duration Intx cast @timeout.@tv_sec set
 
         [event.udata Natx cast context.pair storageAddress = ~]
         [
+          ("[sleepFor cancellation] Calling kevent to cancel EVFILT_TIMER, timer_fd=" context.timer_fd ", checking udata mismatch" LF) printList
           timeout 0n32 1 @event 1 event kqueue_fd kevent -1 = [("FATAL: [In currentFiber.func] epoll_ctl failed, result=" errno LF) printList "" failProc] when
           curEvent: event;
-          ("kevent call sleepFor (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
+          ("[sleepFor cancellation] kevent result: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
         ] while
 
         @context.@fiber @resumingFibers.append

@@ -128,10 +128,10 @@ dispatch: [
         ("kevent call dispatch: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
         fiberPair: event.udata Natx cast FiberPair addressToReference;
         result: event.filter (
-          [EVFILT_READ = ] [@fiberPair.@readFiber !fiber TRUE]
-          [EVFILT_TIMER = ] [@fiberPair.@readFiber !fiber TRUE]
-          [EVFILT_WRITE =] [@fiberPair.@writeFiber !fiber TRUE]
-          [FALSE]
+          [EVFILT_READ =] [("[dispatch] EVFILT_READ matched, resuming readFiber" LF) printList @fiberPair.@readFiber !fiber TRUE]
+          [EVFILT_TIMER =] [("[dispatch] EVFILT_TIMER matched, resuming readFiber" LF) printList @fiberPair.@readFiber !fiber TRUE]
+          [EVFILT_WRITE =] [("[dispatch] EVFILT_WRITE matched, resuming writeFiber" LF) printList @fiberPair.@writeFiber !fiber TRUE]
+          [("[dispatch] WARNING: Unknown filter type: " event.filter LF) printList FALSE]
         ) cond;
 
         [result [fiber nil?] && ~] "dispatch failed" assert
