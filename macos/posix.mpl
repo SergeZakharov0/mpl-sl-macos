@@ -19,6 +19,7 @@
 EAGAIN:      [    35];
 EINPROGRESS: [    36];
 EINTR:       [     4];
+EINVAL:      [    22];
 EWOULDBLOCK: [EAGAIN];
 
 F_SETFD: [2];

@@ -19,6 +19,7 @@
 "control.when"          use
 "control.while"         use
 
+"posix.EINVAL"     use
 "posix.itimerspec" use
 "posix.timespec"   use
 
@@ -148,7 +149,10 @@ sleepFor: [
         @deleteEvent context.timer_fd EVFILT_TIMER EV_DELETE 0n32 0 0n64 0n64 0n64 EV_SET
 
         timespec Ref 0n32 0 struct_kevent Ref 1 deleteEvent kqueue_fd kevent -1 = [
-          ("FATAL: [In sleepFor cancellation] kevent EV_DELETE failed, result=" errno LF) printList "" failProc
+          lastErrorNumber: errno;
+          lastErrorNumber EINVAL = ~ [
+            ("FATAL: [In sleepFor cancellation] kevent EV_DELETE failed, result=" lastErrorNumber LF) printList "" failProc
+          ] when
         ] when
 
         @context.@fiber @resumingFibers.append
