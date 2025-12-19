@@ -113,9 +113,9 @@ sleepFor: [
       useNanoseconds: duration USE_NANOSECONDS_THRESHOLD <;
 
       expirationTime: useNanoseconds [
-        duration SECONDS_TO_NANOSECONDS_MULTIPLIER * Int64 cast
+        duration SECONDS_TO_NANOSECONDS_MULTIPLIER * Int32 cast
       ] [
-        duration SECONDS_TO_MICROSECONDS_MULTIPLIER * Int64 cast
+        duration SECONDS_TO_MICROSECONDS_MULTIPLIER * Int32 cast
       ] if;
 
       timeUnit: useNanoseconds [NOTE_NSECONDS] [NOTE_USECONDS] if;
