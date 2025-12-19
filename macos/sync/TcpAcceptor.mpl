@@ -19,6 +19,7 @@
 "control.when"     use
 "control.||"       use
 
+"posix.EINVAL"          use
 "posix.O_NONBLOCK"      use
 "posix.close"           use
 "posix.fcntl"           use
@@ -115,7 +116,13 @@ TcpAcceptor: [{
           acceptContext: @acceptContext addressToReference;
 
           acceptContext.acceptor Nat64 cast @acceptContext.@le.!ident
-          timespec Ref 0n32 0 struct_kevent Ref 1 acceptContext.le kqueue_fd kevent -1 = [("FATAL: [accept] kevent failed, result=" errno LF) printList "" failProc] when
+          # Ignore EINVAL - socket may be already closed during cleanup
+          timespec Ref 0n32 0 struct_kevent Ref 1 acceptContext.le kqueue_fd kevent -1 = [
+            lastErrorNumber: errno;
+            lastErrorNumber EINVAL = ~ [
+              ("FATAL: [accept] kevent failed, result=" lastErrorNumber LF) printList "" failProc
+            ] when
+          ] when
 
           @acceptContext.@fiber @resumingFibers.append
         ] @currentFiber.setFunc

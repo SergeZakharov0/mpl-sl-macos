@@ -29,6 +29,7 @@
 
 "posix.EAGAIN"          use
 "posix.EINPROGRESS"     use
+"posix.EINVAL"          use
 "posix.EWOULDBLOCK"     use
 "posix.O_NONBLOCK"      use
 "posix.close"           use
@@ -159,7 +160,13 @@ TcpConnection: [{
               fiberPair storageAddress Nat64 cast @connectionEvent.@udata set
             ] when
 
-            timespec Ref 0n32 0 struct_kevent Ref 1 connectionEvent kqueue_fd kevent -1 = [("FATAL: [read] kevent failed, result=" errno LF) printList "" failProc] when
+            # Ignore EINVAL - socket may be already closed during cleanup
+            timespec Ref 0n32 0 struct_kevent Ref 1 connectionEvent kqueue_fd kevent -1 = [
+              lastErrorNumber: errno;
+              lastErrorNumber EINVAL = ~ [
+                ("FATAL: [read] kevent failed, result=" lastErrorNumber LF) printList "" failProc
+              ] when
+            ] when
 
             @fiberPair.@readFiber @resumingFibers.append
           ] @currentFiber.setFunc
@@ -276,7 +283,13 @@ TcpConnection: [{
               EV_ONESHOT EV_ADD or @connectionEvent.@flags set
             ] when
 
-            timespec Ref 0n32 0 struct_kevent Ref 1 connectionEvent kqueue_fd kevent -1 = [("FATAL: [write] kevent failed, result=" errno LF) printList "" failProc] when
+            # Ignore EINVAL - socket may be already closed during cleanup
+            timespec Ref 0n32 0 struct_kevent Ref 1 connectionEvent kqueue_fd kevent -1 = [
+              lastErrorNumber: errno;
+              lastErrorNumber EINVAL = ~ [
+                ("FATAL: [write] kevent failed, result=" lastErrorNumber LF) printList "" failProc
+              ] when
+            ] when
 
             @fiberPair.@writeFiber @resumingFibers.append
           ] @currentFiber.setFunc

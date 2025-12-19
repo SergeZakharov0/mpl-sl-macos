@@ -119,7 +119,7 @@ dispatch: [
       event: struct_kevent;
       timespec Ref 0n32 MAX_EVENT_COUNT @event 0 struct_kevent Ref kqueue_fd kevent -1 = [
         lastErrorNumber: errno;
-        lastErrorNumber EINTR = ~ [("FATAL: [In dispatch] kevent failed, result=" lastErrorNumber LF) printList "" failProc] when
+        lastErrorNumber EINTR = ~ [("FATAL: [dispatch] kevent failed, result=" lastErrorNumber LF) printList "" failProc] when
         TRUE
       ] [
         fiberPair: event.udata Natx cast FiberPair addressToReference;
