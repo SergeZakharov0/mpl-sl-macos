@@ -113,13 +113,17 @@ TcpConnection: [{
 
     skipSchedule: FALSE;
     recievedByteCount -1ix = [
+      ("DEBUG: recv returned -1, entering error handling" LF) printList
       (
         [result "" = [skipSchedule ~] &&] [
           lastErrorNumber: errno;
+          ("DEBUG: errno = " lastErrorNumber ", EAGAIN = " EAGAIN ", EWOULDBLOCK = " EWOULDBLOCK LF) printList
           lastErrorNumber EAGAIN = ~ [lastErrorNumber EWOULDBLOCK = ~] && [("recv failed, result=" lastErrorNumber) @result.catMany] [
-            TRUE @skipSchedule set
+            FALSE @skipSchedule set
           ] if
         ] [
+          ("DEBUG: After errno check - result='" result "', skipSchedule=" skipSchedule LF) printList
+          ("DEBUG: Entering scheduling logic" LF) printList
           @currentFiber @fiberPair.!readFiber
 
           isReadWrite: fiberPair.writeFiber nil? ~;
@@ -148,6 +152,7 @@ TcpConnection: [{
           ("kevent call read: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
 
           "control.Nat32" use
+
         ] [
           context: {
             connection: connection new;
@@ -199,10 +204,19 @@ TcpConnection: [{
       ) sequence
     ] when
 
+    ("DEBUG: Before final check - recievedByteCount=" recievedByteCount ", result='" result "', skipSchedule=" skipSchedule LF) printList
     result "" = [
-      recievedByteCount 0ix = ["closed" @result.cat] [recievedByteCount Int32 cast !size] if
+      ("DEBUG: result is empty, checking recievedByteCount" LF) printList
+      recievedByteCount 0ix = [
+        ("DEBUG: recievedByteCount is 0, setting result to 'closed'" LF) printList
+        "closed" @result.cat
+      ] [
+        ("DEBUG: Setting size to " recievedByteCount LF) printList
+        recievedByteCount Int32 cast !size
+      ] if
     ] when
 
+    ("DEBUG: Final - size=" size ", result='" result "'" LF) printList
     @size @result
   ];
 
@@ -243,7 +257,10 @@ TcpConnection: [{
       (
         [result "" =] [
           lastErrorNumber: errno;
-          lastErrorNumber EAGAIN = ~ [lastErrorNumber EWOULDBLOCK = ~] && [("send failed, result=" lastErrorNumber) @result.catMany] when
+          lastErrorNumber EAGAIN = ~ [lastErrorNumber EWOULDBLOCK = ~] && [
+            ("DEBUG: Setting error message for errno " lastErrorNumber LF) printList
+            ("send failed, result=" lastErrorNumber) @result.catMany
+          ] when
         ] [
           @currentFiber @fiberPair.!writeFiber
 
@@ -255,14 +272,14 @@ TcpConnection: [{
           writeEvent: 0 @connectionEvents @;
           fiberPair storageAddress Nat64 cast @writeEvent.@udata set
           connection Nat64 cast @writeEvent.!ident
-          EVFILT_READ @writeEvent.@filter set
+          EVFILT_WRITE @writeEvent.@filter set
           EV_ONESHOT EV_ADD or @writeEvent.@flags set
 
           isReadWrite [
             readEvent: 1 @connectionEvents @;
             fiberPair storageAddress Nat64 cast @readEvent.@udata set
             connection Nat64 cast @readEvent.!ident
-            EVFILT_WRITE @readEvent.@filter set
+            EVFILT_READ @readEvent.@filter set
             EV_ONESHOT EV_ADD or @readEvent.@flags set
             curEvent: readEvent;
             ("kevent call write: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
