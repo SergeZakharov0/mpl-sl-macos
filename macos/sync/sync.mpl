@@ -19,8 +19,8 @@
 "control.when"          use
 "control.while"         use
 
-"posix/posix.itimerspec" use
-"posix/posix.timespec"   use
+"posix.itimerspec" use
+"posix.timespec"   use
 
 "errno.errno"         use
 "macos.EVFILT_TIMER"  use

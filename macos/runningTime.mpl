@@ -10,9 +10,9 @@
 "control.failProc" use
 "control.when"     use
 
-"posix/posix.CLOCK_UPTIME_RAW" use
-"posix/posix.clock_gettime"    use
-"posix/posix.timespec"         use
+"posix.CLOCK_UPTIME_RAW" use
+"posix.clock_gettime"    use
+"posix.timespec"         use
 
 "errno.errno" use
 

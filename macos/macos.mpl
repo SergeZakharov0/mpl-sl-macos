@@ -18,8 +18,8 @@
 "control.when"      use
 "conventions.cdecl" use
 
-"posix/posix.itimerspec" use
-"posix/posix.timespec"   use
+"posix.itimerspec" use
+"posix.timespec"   use
 
 # struct_kevent
 
