@@ -118,10 +118,14 @@ dispatch: [
       MAX_EVENT_COUNT: [1];
       event: struct_kevent;
       timespec Ref 0n32 MAX_EVENT_COUNT @event 0 struct_kevent Ref kqueue_fd kevent -1 = [
+        curEvent: event;
+        ("kevent call dispatch: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
         lastErrorNumber: errno;
         lastErrorNumber EINTR = ~ [("FATAL: [In dispatch] kevent failed, result=" lastErrorNumber LF) printList "" failProc] when
         TRUE
       ] [
+        curEvent: event;
+        ("kevent call dispatch: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
         fiberPair: event.udata Natx cast FiberPair addressToReference;
         result: event.filter (
           [EVFILT_READ = ] [@fiberPair.@readFiber !fiber TRUE]

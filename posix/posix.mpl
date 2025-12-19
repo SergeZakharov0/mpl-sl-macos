@@ -16,8 +16,8 @@
 "ucontext.swapcontext" use
 "ucontext.ucontext_t"  use
 
-EAGAIN:      [    11];
-EINPROGRESS: [   115];
+EAGAIN:      [    35];
+EINPROGRESS: [    36];
 EINTR:       [     4];
 EWOULDBLOCK: [EAGAIN];
 
@@ -41,7 +41,7 @@ WIFEXITED: [
 
 long: [Intx];
 
-O_NONBLOCK: [2048];
+O_NONBLOCK: [4];
 
 stack_t: [{
   ss_sp:    Natx;

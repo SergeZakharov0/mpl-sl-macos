@@ -121,6 +121,8 @@ sleepFor: [
       timespec Ref 0n32 0 struct_kevent Ref 1 timerEvent kqueue_fd kevent -1 = [
         ("In [sleepFor]: FATAL: kevent failed, result=" errno LF) printList "" failProc
       ] when
+      curEvent: timerEvent;
+      ("kevent call sleepFor: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
 
       context: {
         fiber:    @currentFiber;
@@ -139,6 +141,8 @@ sleepFor: [
         [event.udata Natx cast context.pair storageAddress = ~]
         [
           timeout 0n32 1 @event 1 event kqueue_fd kevent -1 = [("FATAL: [In currentFiber.func] epoll_ctl failed, result=" errno LF) printList "" failProc] when
+          curEvent: event;
+          ("kevent call sleepFor (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
         ] while
 
         @context.@fiber @resumingFibers.append

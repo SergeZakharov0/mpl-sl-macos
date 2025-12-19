@@ -31,9 +31,11 @@
 "socket.SOCK_STREAM"     use
 "socket.SOL_SOCKET"      use
 "socket.SOMAXCONN"       use
+"socket.SO_ERROR"        use
 "socket.SO_REUSEADDR"    use
 "socket.TCP_NODELAY"     use
 "socket.bind"            use
+"socket.getsockopt"      use
 "socket.htonl"           use
 "socket.htons"           use
 "socket.listen"          use
@@ -46,11 +48,15 @@
 
 "errno.errno"         use
 "macos.EVFILT_READ"   use
+"macos.EVFILT_WRITE"  use
+"macos.EV_ADD"        use
+"macos.EV_ENABLE"     use
 "macos.EV_ONESHOT"    use
 "macos.kevent"        use
 "macos.struct_kevent" use
 
 "TcpConnection.TcpConnection"   use
+"syncPrivate.FiberData"         use
 "syncPrivate.FiberPair"         use
 "syncPrivate.canceled?"         use
 "syncPrivate.currentFiber"      use
@@ -80,9 +86,11 @@ TcpAcceptor: [{
   accept: [
     [valid?] "invalid TcpAcceptor" assert
 
-    address:    Nat32;
-    connection: TcpConnection;
-    result:     String;
+    address:     Nat32;
+    connection:  TcpConnection;
+    result:      String;
+    listenEvent: struct_kevent;
+    writeEvent:  struct_kevent;
 
     (
       [result "" =] [
@@ -91,26 +99,28 @@ TcpAcceptor: [{
         fiberPair: FiberPair;
         @currentFiber @fiberPair.!readFiber
 
-        listenEvent: struct_kevent virtual;
         EVFILT_READ @listenEvent.@filter set
-        EV_ONESHOT @listenEvent.@flags set
+        EV_ONESHOT EV_ADD or @listenEvent.@flags set
         fiberPair storageAddress Nat64 cast @listenEvent.@udata set
         acceptor Nat64 cast @listenEvent.!ident
 
         timespec Ref 0n32 0 struct_kevent Ref 1 listenEvent kqueue_fd kevent -1 = [("kevent failed, result=" errno) @result.catMany] when
+        curEvent: listenEvent;
+        ("kevent call accept: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
       ] [
         acceptContext: {
           acceptor: acceptor new;
           fiber:    @currentFiber;
+          le: @listenEvent new;
         };
-
         acceptContext storageAddress [
           acceptContext: @acceptContext addressToReference;
 
-          acceptContext.acceptor Nat64 cast @listenEvent.!ident
+          acceptContext.acceptor Nat64 cast @acceptContext.@le.!ident
+          timespec Ref 0n32 0 struct_kevent Ref 1 acceptContext.le kqueue_fd kevent -1 = [("FATAL: kevent failed, result=" errno LF) printList "" failProc] when
 
-          timespec Ref 0n32 0 struct_kevent Ref 1 listenEvent kqueue_fd kevent -1 = [("FATAL: kevent failed, result=" errno LF) printList "" failProc] when
-
+          curEvent: @acceptContext.@le;
+          ("kevent call accept: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
           @acceptContext.@fiber @resumingFibers.append
         ] @currentFiber.setFunc
 
@@ -130,11 +140,54 @@ TcpAcceptor: [{
         flags: (0) F_GETFL connection.connection fcntl;
         flags -1 = [
           O_NONBLOCK Nat32 cast flags Nat32 cast or Int32 cast !flags
-          (flags new) F_SETFL connection.connection fcntl -1 =
+          (O_NONBLOCK Int32 cast) F_SETFL connection.connection fcntl -1 =
         ] || [("fcntl failed, result=" errno) @result.catMany] when
       ] [
         nodelay: 1;
         nodelay storageSize Nat32 cast nodelay storageAddress TCP_NODELAY IPPROTO_TCP connection.connection setsockopt -1 = [("setsockopt failed, result=" errno) @result.catMany] when
+      ] [
+        fiberPair: FiberPair;
+        @currentFiber @fiberPair.!writeFiber
+
+        connectEvent: struct_kevent;
+
+        connection.connection Nat64 cast @connectEvent.!ident
+        EVFILT_WRITE @connectEvent.@filter set
+        EV_ADD EV_ONESHOT or @connectEvent.@flags set
+
+        fiberPair storageAddress Nat64 cast @connectEvent.@udata set
+
+        timespec Ref 0n32 0 struct_kevent Ref 1 connectEvent kqueue_fd kevent -1 = [("kevent failed, result=" errno) @result.catMany] when
+        curEvent: connectEvent;
+        ("kevent call accept: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
+      ] [
+        context: {
+          connection: connection.connection new;
+          fiber:      @currentFiber;
+          connEvent:  struct_kevent;
+        };
+
+        connection.connection Nat64 cast @context.@connEvent.!ident
+
+        context storageAddress [
+          context: @context addressToReference;
+
+          timespec Ref 0n32 0 struct_kevent Ref 1 context.connEvent kqueue_fd kevent -1 = [("kevent failed, result=" errno) printList "" failProc] when
+          curEvent: context.connEvent;
+          ("kevent call accept: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
+
+          @context.@fiber @resumingFibers.append
+        ] @currentFiber.setFunc
+
+        dispatch
+        FiberData Ref @fiberPair.!readFiber
+        canceled? ["canceled" @result.cat] when
+      ] [
+        @defaultCancelFunc @currentFiber.!func
+
+        retVal:    -1;
+        retValLen: retVal storageSize;
+        retValLen storageAddress socklen_t addressToReference retVal storageAddress SO_ERROR SOL_SOCKET connection.connection getsockopt -1 = [("getsockopt failed, result=" errno) @result.catMany] when
       ] [
         remoteAddress storageAddress sockaddr_in addressToReference .sin_addr ntohl !address
       ]

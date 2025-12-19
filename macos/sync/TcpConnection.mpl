@@ -103,14 +103,22 @@ TcpConnection: [{
 
     recievedByteCount: 0ix;
     canceled? ["canceled" @result.cat] [
+      flags: (0) F_GETFL connection fcntl;
+      ("READ data.size " data.size LF) printList
+      ("READ connection " connection LF) printList
+      ("READ flags " flags LF) printList
       0 data.size Natx cast data.data storageAddress connection recv !recievedByteCount
+      ("READ read " recievedByteCount " bytes in Connection" LF) printList
     ] if
 
+    skipSchedule: FALSE;
     recievedByteCount -1ix = [
       (
-        [result "" =] [
+        [result "" = [skipSchedule ~] &&] [
           lastErrorNumber: errno;
-          lastErrorNumber EAGAIN = ~ [lastErrorNumber EWOULDBLOCK = ~] && [("recv failed, result=" lastErrorNumber) @result.catMany] when
+          lastErrorNumber EAGAIN = ~ [lastErrorNumber EWOULDBLOCK = ~] && [("recv failed, result=" lastErrorNumber) @result.catMany] [
+            TRUE @skipSchedule set
+          ] if
         ] [
           @currentFiber @fiberPair.!readFiber
 
@@ -123,18 +131,24 @@ TcpConnection: [{
           fiberPair storageAddress Nat64 cast @readEvent.@udata set
           connection Nat64 cast @readEvent.!ident
           EVFILT_READ @readEvent.@filter set
-          EV_ONESHOT @readEvent.@flags set
+          EV_ONESHOT EV_ADD or @readEvent.@flags set
 
           isReadWrite [
             writeEvent: 1 @connectionEvents @;
             fiberPair storageAddress Nat64 cast @writeEvent.@udata set
             connection Nat64 cast @writeEvent.!ident
             EVFILT_WRITE @writeEvent.@filter set
-            EV_ONESHOT @writeEvent.@flags set
+            EV_ONESHOT EV_ADD or @writeEvent.@flags set
+            curEvent: writeEvent;
+            ("kevent call read: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
           ] when
 
           timespec Ref 0n32 0 struct_kevent Ref nEvents connectionEvents storageAddress struct_kevent addressToReference kqueue_fd kevent -1 = [("kevent failed, result=" errno) @result.catMany] when
+          curEvent: readEvent;
+          ("kevent call read: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
+
           "control.Nat32" use
+
         ] [
           context: {
             connection: connection new;
@@ -150,11 +164,13 @@ TcpConnection: [{
             context.connection Nat64 cast @connectionEvent.!ident
             fiberPair.writeFiber nil? ~ [
               EVFILT_WRITE @connectionEvent.@filter set
-              EV_ONESHOT @connectionEvent.@flags set
+              EV_ONESHOT EV_ADD or @connectionEvent.@flags set
               fiberPair storageAddress Nat64 cast @connectionEvent.@udata set
             ] when
 
             timespec Ref 0n32 0 struct_kevent Ref 1 connectionEvent kqueue_fd kevent -1 = [("FATAL: kevent failed, result=" errno LF) printList "" failProc] when
+            curEvent: connectionEvent;
+            ("kevent call read: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
 
             @fiberPair.@readFiber @resumingFibers.append
           ] @currentFiber.setFunc
@@ -170,10 +186,12 @@ TcpConnection: [{
 
             connection Nat64 cast @connectionEvent.!ident
             EVFILT_WRITE @connectionEvent.@filter set
-            EV_ONESHOT @connectionEvent.@flags set
+            EV_ONESHOT EV_ADD or @connectionEvent.@flags set
             fiberPair storageAddress Nat64 cast @connectionEvent.@udata set
 
             timespec Ref 0n32 0 struct_kevent Ref 1 connectionEvent kqueue_fd kevent -1 = [("kevent failed, result=" errno) @result.catMany] when
+            curEvent: connectionEvent;
+            ("kevent call read: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
           ] when
         ] [
           0 data.size Natx cast data.data storageAddress connection recv !recievedByteCount
@@ -217,6 +235,8 @@ TcpConnection: [{
 
     sentByteCount: 0ix;
     canceled? ["canceled" @result.cat] [
+      ("WRITE data.size " data.size LF) printList
+      ("WRITE connection " connection LF) printList
       MSG_NOSIGNAL Int32 cast data.size Natx cast data.data storageAddress connection send !sentByteCount
     ] if
 
@@ -237,17 +257,21 @@ TcpConnection: [{
           fiberPair storageAddress Nat64 cast @writeEvent.@udata set
           connection Nat64 cast @writeEvent.!ident
           EVFILT_READ @writeEvent.@filter set
-          EV_ONESHOT @writeEvent.@flags set
+          EV_ONESHOT EV_ADD or @writeEvent.@flags set
 
           isReadWrite [
             readEvent: 1 @connectionEvents @;
             fiberPair storageAddress Nat64 cast @readEvent.@udata set
             connection Nat64 cast @readEvent.!ident
             EVFILT_WRITE @readEvent.@filter set
-            EV_ONESHOT @readEvent.@flags set
+            EV_ONESHOT EV_ADD or @readEvent.@flags set
+            curEvent: readEvent;
+            ("kevent call write: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
           ] when
 
           timespec Ref 0n32 0 struct_kevent Ref nEvents connectionEvents storageAddress struct_kevent addressToReference kqueue_fd kevent -1 = [("kevent failed, result=" errno) @result.catMany] when
+          curEvent: writeEvent;
+          ("kevent call write: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
         ] [
           context: {
             connection: connection new;
@@ -263,10 +287,12 @@ TcpConnection: [{
             fiberPair.readFiber nil? ~ [
               EVFILT_READ @connectionEvent.@filter set
               fiberPair storageAddress Nat64 cast @connectionEvent.@udata set
-              EV_ONESHOT @connectionEvent.@flags set
+              EV_ONESHOT EV_ADD or @connectionEvent.@flags set
             ] when
 
             timespec Ref 0n32 0 struct_kevent Ref 1 connectionEvent kqueue_fd kevent -1 = [("FATAL: kevent failed, result=" errno LF) printList "" failProc] when
+            curEvent: connectionEvent;
+            ("kevent call write: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
 
             @fiberPair.@writeFiber @resumingFibers.append
           ] @currentFiber.setFunc
@@ -284,6 +310,8 @@ TcpConnection: [{
             fiberPair storageAddress Nat64 cast @connectionEvent.@udata set
 
             timespec Ref 0n32 0 struct_kevent Ref 1 connectionEvent kqueue_fd kevent -1 = [("kevent failed, result=" errno) @result.catMany] when
+            curEvent: connectionEvent;
+            ("kevent call write: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
           ] when
         ] [
           0 data.size Natx cast data.data storageAddress connection send !sentByteCount
@@ -327,7 +355,8 @@ makeTcpConnection: [
       port    htons      @addressData.!sin_port
       address htonl      @addressData.!sin_addr
 
-      addressData storageSize Nat32 cast addressData storageAddress sockaddr addressToReference connection.connection connect 0 = ~ [
+      retCode: addressData storageSize Nat32 cast addressData storageAddress sockaddr addressToReference connection.connection connect;
+      retCode 0 < [errno EINPROGRESS = ~] && [
         ("connect failed, result=" errno) @result.catMany
       ] when
     ] [
@@ -343,6 +372,8 @@ makeTcpConnection: [
       fiberPair storageAddress Nat64 cast @connectEvent.@udata set
 
       timespec Ref 0n32 0 struct_kevent Ref 1 connectEvent kqueue_fd kevent -1 = [("kevent failed, result=" errno) @result.catMany] when
+      curEvent: connectEvent;
+      ("kevent call makeTcpConnection: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
     ] [
       context: {
         connection: connection.connection new;
@@ -356,6 +387,8 @@ makeTcpConnection: [
         context: @context addressToReference;
 
         timespec Ref 0n32 0 struct_kevent Ref 1 context.connEvent kqueue_fd kevent -1 = [("kevent failed, result=" errno) printList "" failProc] when
+        curEvent: context.connEvent;
+        ("kevent call makeTcpConnection: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
 
         @context.@fiber @resumingFibers.append
       ] @currentFiber.setFunc
