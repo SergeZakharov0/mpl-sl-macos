@@ -137,7 +137,7 @@ TcpConnection: [{
             EV_ONESHOT EV_ADD or @writeEvent.@flags set
           ] when
 
-          timespec Ref 0n32 0 struct_kevent Ref nEvents connectionEvents storageAddress struct_kevent addressToReference kqueue_fd kevent -1 = [("kevent failed, result=" errno) @result.catMany] when
+          timespec Ref 0n32 0 struct_kevent Ref nEvents connectionEvents storageAddress struct_kevent addressToReference kqueue_fd kevent -1 = [("[read] kevent failed, result=" errno) @result.catMany] when
 
           "control.Nat32" use
         ] [
@@ -159,7 +159,7 @@ TcpConnection: [{
               fiberPair storageAddress Nat64 cast @connectionEvent.@udata set
             ] when
 
-            timespec Ref 0n32 0 struct_kevent Ref 1 connectionEvent kqueue_fd kevent -1 = [("FATAL: kevent failed, result=" errno LF) printList "" failProc] when
+            timespec Ref 0n32 0 struct_kevent Ref 1 connectionEvent kqueue_fd kevent -1 = [("FATAL: [read] kevent failed, result=" errno LF) printList "" failProc] when
 
             @fiberPair.@readFiber @resumingFibers.append
           ] @currentFiber.setFunc
@@ -178,7 +178,7 @@ TcpConnection: [{
             EV_ONESHOT EV_ADD or @connectionEvent.@flags set
             fiberPair storageAddress Nat64 cast @connectionEvent.@udata set
 
-            timespec Ref 0n32 0 struct_kevent Ref 1 connectionEvent kqueue_fd kevent -1 = [("kevent failed, result=" errno) @result.catMany] when
+            timespec Ref 0n32 0 struct_kevent Ref 1 connectionEvent kqueue_fd kevent -1 = [("[read] kevent failed, result=" errno) @result.catMany] when
           ] when
         ] [
           0 data.size Natx cast data.data storageAddress connection recv !recievedByteCount
@@ -257,7 +257,7 @@ TcpConnection: [{
             EV_ONESHOT EV_ADD or @readEvent.@flags set
           ] when
 
-          timespec Ref 0n32 0 struct_kevent Ref nEvents connectionEvents storageAddress struct_kevent addressToReference kqueue_fd kevent -1 = [("kevent failed, result=" errno) @result.catMany] when
+          timespec Ref 0n32 0 struct_kevent Ref nEvents connectionEvents storageAddress struct_kevent addressToReference kqueue_fd kevent -1 = [("[write] kevent failed, result=" errno) @result.catMany] when
         ] [
           context: {
             connection: connection new;
@@ -276,7 +276,7 @@ TcpConnection: [{
               EV_ONESHOT EV_ADD or @connectionEvent.@flags set
             ] when
 
-            timespec Ref 0n32 0 struct_kevent Ref 1 connectionEvent kqueue_fd kevent -1 = [("FATAL: kevent failed, result=" errno LF) printList "" failProc] when
+            timespec Ref 0n32 0 struct_kevent Ref 1 connectionEvent kqueue_fd kevent -1 = [("FATAL: [write] kevent failed, result=" errno LF) printList "" failProc] when
 
             @fiberPair.@writeFiber @resumingFibers.append
           ] @currentFiber.setFunc
@@ -293,7 +293,7 @@ TcpConnection: [{
             EVFILT_READ @connectionEvent.@filter set
             fiberPair storageAddress Nat64 cast @connectionEvent.@udata set
 
-            timespec Ref 0n32 0 struct_kevent Ref 1 connectionEvent kqueue_fd kevent -1 = [("kevent failed, result=" errno) @result.catMany] when
+            timespec Ref 0n32 0 struct_kevent Ref 1 connectionEvent kqueue_fd kevent -1 = [("[write] kevent failed, result=" errno) @result.catMany] when
           ] when
         ] [
           0 data.size Natx cast data.data storageAddress connection send !sentByteCount
@@ -353,7 +353,7 @@ makeTcpConnection: [
 
       fiberPair storageAddress Nat64 cast @connectEvent.@udata set
 
-      timespec Ref 0n32 0 struct_kevent Ref 1 connectEvent kqueue_fd kevent -1 = [("kevent failed, result=" errno) @result.catMany] when
+      timespec Ref 0n32 0 struct_kevent Ref 1 connectEvent kqueue_fd kevent -1 = [("[makeTcpConnection] kevent failed, result=" errno) @result.catMany] when
     ] [
       context: {
         connection: connection.connection new;
@@ -366,7 +366,7 @@ makeTcpConnection: [
       context storageAddress [
         context: @context addressToReference;
 
-        timespec Ref 0n32 0 struct_kevent Ref 1 context.connEvent kqueue_fd kevent -1 = [("kevent failed, result=" errno) printList "" failProc] when
+        timespec Ref 0n32 0 struct_kevent Ref 1 context.connEvent kqueue_fd kevent -1 = [("[makeTcpConnection] kevent failed, result=" errno) printList "" failProc] when
 
         @context.@fiber @resumingFibers.append
       ] @currentFiber.setFunc
