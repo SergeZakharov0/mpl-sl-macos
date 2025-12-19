@@ -29,6 +29,7 @@
 "macos.EV_ONESHOT"    use
 "macos.EV_SET"        use
 "macos.NOTE_NSECONDS" use
+"macos.NOTE_USECONDS" use
 "macos.kevent"        use
 "macos.struct_kevent" use
 
@@ -102,12 +103,22 @@ sleepFor: [
   duration: Real64 cast;
 
   SECONDS_TO_NANOSECONDS_MULTIPLIER: [1000000000.0r64];
+  SECONDS_TO_MICROSECONDS_MULTIPLIER: [1000000.0r64];
+  USE_NANOSECONDS_THRESHOLD: [1.0r64];  # Use nanoseconds for < 1 sec, microseconds for >= 1 sec
 
   canceled? ~ [
     duration 0.0r64 = [yield] [
       [currentFiber.@func @defaultCancelFunc is] "invalid cancelation function" assert
 
-      expirationTime: duration SECONDS_TO_NANOSECONDS_MULTIPLIER * Int32 cast;
+      useNanoseconds: duration USE_NANOSECONDS_THRESHOLD <;
+
+      expirationTime: useNanoseconds [
+        duration SECONDS_TO_NANOSECONDS_MULTIPLIER * Int64 cast
+      ] [
+        duration SECONDS_TO_MICROSECONDS_MULTIPLIER * Int64 cast
+      ] if;
+
+      timeUnit: useNanoseconds [NOTE_NSECONDS] [NOTE_USECONDS] if;
 
       timer_fd: getTimerFd;
 
@@ -117,7 +128,7 @@ sleepFor: [
       FiberData Ref @fiberPair.!writeFiber
       @currentFiber @fiberPair.!readFiber
 
-      @timerEvent timer_fd EVFILT_TIMER EV_ADD EV_ONESHOT or NOTE_NSECONDS expirationTime fiberPair storageAddress 0n64 0n64 EV_SET
+      @timerEvent timer_fd EVFILT_TIMER EV_ADD EV_ONESHOT or timeUnit expirationTime fiberPair storageAddress 0n64 0n64 EV_SET
 
       timespec Ref 0n32 0 struct_kevent Ref 1 timerEvent kqueue_fd kevent -1 = [
         ("In [sleepFor]: FATAL: kevent failed, result=" errno LF) printList "" failProc
