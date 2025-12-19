@@ -145,15 +145,10 @@ sleepFor: [
       context storageAddress [
         context: @context addressToReference;
 
+        # Try to delete the timer event (ignore errors - timer may have already fired with EV_ONESHOT)
         deleteEvent: struct_kevent;
         @deleteEvent context.timer_fd EVFILT_TIMER EV_DELETE 0n32 0 0n64 0n64 0n64 EV_SET
-
-        timespec Ref 0n32 0 struct_kevent Ref 1 deleteEvent kqueue_fd kevent -1 = [
-          lastErrorNumber: errno;
-          lastErrorNumber EINVAL = ~ [
-            ("FATAL: [In sleepFor cancellation] kevent EV_DELETE failed, result=" lastErrorNumber LF) printList "" failProc
-          ] when
-        ] when
+        timespec Ref 0n32 0 struct_kevent Ref 1 deleteEvent kqueue_fd kevent drop
 
         @context.@fiber @resumingFibers.append
         context.timer_fd @timers.append
