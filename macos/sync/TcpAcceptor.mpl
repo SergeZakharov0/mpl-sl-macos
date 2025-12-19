@@ -105,8 +105,6 @@ TcpAcceptor: [{
         acceptor Nat64 cast @listenEvent.!ident
 
         timespec Ref 0n32 0 struct_kevent Ref 1 listenEvent kqueue_fd kevent -1 = [("kevent failed, result=" errno) @result.catMany] when
-        curEvent: listenEvent;
-        ("kevent call accept: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
       ] [
         acceptContext: {
           acceptor: acceptor new;
@@ -119,8 +117,6 @@ TcpAcceptor: [{
           acceptContext.acceptor Nat64 cast @acceptContext.@le.!ident
           timespec Ref 0n32 0 struct_kevent Ref 1 acceptContext.le kqueue_fd kevent -1 = [("FATAL: kevent failed, result=" errno LF) printList "" failProc] when
 
-          curEvent: @acceptContext.@le;
-          ("kevent call accept: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
           @acceptContext.@fiber @resumingFibers.append
         ] @currentFiber.setFunc
 
@@ -158,8 +154,6 @@ TcpAcceptor: [{
         fiberPair storageAddress Nat64 cast @connectEvent.@udata set
 
         timespec Ref 0n32 0 struct_kevent Ref 1 connectEvent kqueue_fd kevent -1 = [("kevent failed, result=" errno) @result.catMany] when
-        curEvent: connectEvent;
-        ("kevent call accept: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
       ] [
         context: {
           connection: connection.connection new;
@@ -173,8 +167,6 @@ TcpAcceptor: [{
           context: @context addressToReference;
 
           timespec Ref 0n32 0 struct_kevent Ref 1 context.connEvent kqueue_fd kevent -1 = [("kevent failed, result=" errno) printList "" failProc] when
-          curEvent: context.connEvent;
-          ("kevent call accept: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
 
           @context.@fiber @resumingFibers.append
         ] @currentFiber.setFunc

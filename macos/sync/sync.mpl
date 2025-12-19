@@ -117,14 +117,11 @@ sleepFor: [
       FiberData Ref @fiberPair.!writeFiber
       @currentFiber @fiberPair.!readFiber
 
-      ("[sleepFor] Registering EVFILT_TIMER: timer_fd=" timer_fd ", duration=" duration ", expirationTime=" expirationTime ", fiberPair=" fiberPair storageAddress LF) printList
       @timerEvent timer_fd EVFILT_TIMER EV_ADD EV_ONESHOT or NOTE_NSECONDS expirationTime fiberPair storageAddress 0n64 0n64 EV_SET
 
       timespec Ref 0n32 0 struct_kevent Ref 1 timerEvent kqueue_fd kevent -1 = [
         ("In [sleepFor]: FATAL: kevent failed, result=" errno LF) printList "" failProc
       ] when
-      curEvent: timerEvent;
-      ("kevent call sleepFor: (ident: " "" curEvent.ident ", filter: " curEvent.filter ", flags: " curEvent.flags ", fflags: " curEvent.fflags ", data: " curEvent.data ", udata: " curEvent.udata  ")" LF) printList
 
       context: {
         fiber:    @currentFiber;
@@ -135,7 +132,6 @@ sleepFor: [
 
       context storageAddress [
         context: @context addressToReference;
-        ("[sleepFor cancellation] Deleting EVFILT_TIMER, timer_fd=" context.timer_fd LF) printList
 
         deleteEvent: struct_kevent;
         @deleteEvent context.timer_fd EVFILT_TIMER EV_DELETE 0n32 0 0n64 0n64 0n64 EV_SET
@@ -143,8 +139,6 @@ sleepFor: [
         timespec Ref 0n32 0 struct_kevent Ref 1 deleteEvent kqueue_fd kevent -1 = [
           ("FATAL: [In sleepFor cancellation] kevent EV_DELETE failed, result=" errno LF) printList "" failProc
         ] when
-
-        ("[sleepFor cancellation] Timer deleted successfully" LF) printList
 
         @context.@fiber @resumingFibers.append
         context.timer_fd @timers.append
