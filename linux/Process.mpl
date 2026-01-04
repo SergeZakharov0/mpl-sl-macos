@@ -75,9 +75,8 @@ Process: [{
         childPipe objectValues [closeDescriptor] each
       ] [
         r/w: [
-          op: descriptor: buffer:;;;
-          opName: @op 0 codeTokenRead virtual;
-          [opName "read" = opName "write" = or] "Invalid operatin name" assert
+          opName: op: descriptor: buffer:;;;;
+          [opName "read" = opName "write" = or] "Invalid operation name" assert
 
           result: TRUE;
 
@@ -117,7 +116,7 @@ Process: [{
           0 [ # A child's body, not a parent's one
             childPipe.in closeDescriptor
             arguments.data storageAddress arguments.data execvp drop
-            [write] childPipe.out errno r/w drop
+            "write" [write] childPipe.out errno r/w drop
             childPipe.out closeDescriptor
             1 exit
           ]
@@ -127,7 +126,7 @@ Process: [{
             childPipe.out closeDescriptor
 
             buffer: Int32;
-            [read] childPipe.in buffer r/w [
+            "read" [read] childPipe.in buffer r/w [
               "execvp" buffer errorMessage2 !result
               FALSE wait
             ] when
@@ -152,6 +151,7 @@ Process: [{
   kill: [
     "kill" assertCreated
     "posix.kill" use
+
     SIGKILL processId kill -1 = [
       "kill" 1 errorExit
     ] when
