@@ -119,7 +119,7 @@ timespec: [{
   size:    Natx;
 } Intx {convention: cdecl;} "write" importFunction
 
-ucontext_t:  @ucontext_t;
-getcontext:  @getcontext;
-makecontext: @makecontext;
-swapcontext: @swapcontext;
+ucontext_t:  [ucontext_t ];
+getcontext:  [getcontext ];
+makecontext: [makecontext];
+swapcontext: [swapcontext];
